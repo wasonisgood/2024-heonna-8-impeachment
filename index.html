@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2024憲那8 總統彈劾案 - 智慧閱讀器</title>
+    
+    <!-- 字體 -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@300;500;700&family=Noto+Sans+TC:wght@300;400;500&display=swap" rel="stylesheet">
+    
+    <!-- Markmap (心智圖函式庫) -->
+    <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+    <script src="https://cdn.jsdelivr.net/npm/markmap-view@0.15.4"></script>
+    <script src="https://cdn.jsdelivr.net/npm/markmap-lib@0.15.4/dist/browser/index.min.js"></script>
+
+    <style>
+        :root {
+            --bg-color: #f9f9f7;
+            --text-color: #2c2c2c;
+            --sidebar-bg: #1f2023;
+            --sidebar-text: #e0e0e0;
+            --accent-color: #b83b3b; /* 權威紅 */
+            --accent-hover: #962d2d;
+            --secondary-color: #4a6fa5; /* 科技藍，用於功能按鈕 */
+            --border-color: #e0e0e0;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Noto Serif TC', serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* --- 側邊欄 --- */
+        #sidebar {
+            width: 320px;
+            background-color: var(--sidebar-bg);
+            color: var(--sidebar-text);
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid #333;
+            z-index: 1000;
+            transition: transform 0.3s ease;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.2);
+        }
+
+        #sidebar-header {
+            padding: 20px;
+            background-color: #161618;
+            font-family: 'Noto Sans TC', sans-serif;
+            border-bottom: 1px solid #333;
+        }
+
+        .global-map-btn {
+            width: 100%;
+            padding: 10px;
+            margin-top: 10px;
+            background-color: var(--secondary-color);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: background 0.2s;
+        }
+        .global-map-btn:hover { background-color: #3b5c8d; }
+
+        #toc {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px 0;
+        }
+
+        .toc-item {
+            padding: 8px 20px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+            text-decoration: none;
+            color: #aaa;
+            display: block;
+            line-height: 1.4;
+        }
+        .toc-item:hover { color: #fff; background: rgba(255,255,255,0.05); }
+        .toc-item.active { border-left-color: var(--accent-color); color: #fff; background: rgba(255,255,255,0.05); font-weight: bold; }
+        
+        .toc-lvl-0 { font-size: 1.05em; font-weight: 700; color: #fff; margin-top: 10px; background: #2a2a2d; }
+        .toc-lvl-1 { padding-left: 30px; }
+        .toc-lvl-2 { padding-left: 45px; font-size: 0.85em; }
+        .toc-lvl-3 { padding-left: 60px; font-size: 0.8em; }
+
+        /* --- 主內容區 --- */
+        #main {
+            flex: 1;
+            overflow-y: auto;
+            position: relative;
+            scroll-behavior: smooth;
+        }
+
+        #content-container {
+            max-width: 850px;
+            margin: 0 auto;
+            padding: 60px 40px 150px 40px;
+            line-height: 1.9;
+            font-size: 1.15em;
+            background-color: #fff;
+            box-shadow: 0 0 30px rgba(0,0,0,0.03);
+            min-height: 100%;
+        }
+
+        /* --- 排版樣式 --- */
+        h1.doc-title { text-align: center; margin-bottom: 50px; border-bottom: 3px double #000; padding-bottom: 20px; }
+        
+        /* 標題與工具列容器 */
+        .section-wrapper {
+            position: relative;
+            margin-top: 3em;
+            margin-bottom: 1em;
+        }
+        
+        .section-header {
+            margin: 0;
+            display: inline-block;
+            line-height: 1.4;
+        }
+
+        /* 工具按鈕 (語音/心智圖) */
+        .tool-bar {
+            display: inline-flex;
+            gap: 8px;
+            margin-left: 15px;
+            vertical-align: middle;
+            opacity: 0.4;
+            transition: opacity 0.2s;
+        }
+        .section-wrapper:hover .tool-bar { opacity: 1; }
+
+        .tool-btn {
+            background: none;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+            padding: 2px 8px;
+            font-size: 0.7em;
+            font-family: 'Noto Sans TC', sans-serif;
+            color: #666;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            transition: all 0.2s;
+        }
+        .tool-btn:hover { background-color: #f0f0f0; color: #000; border-color: #999; }
+        .tool-btn.speaking { background-color: var(--accent-color); color: white; border-color: var(--accent-color); animation: pulse 1.5s infinite; }
+
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
+
+        /* 層級樣式 */
+        .lvl-0 { text-align: center; font-size: 1.7em; font-weight: 700; border-top: 1px solid #eee; padding-top: 40px; }
+        .lvl-1 { font-size: 1.4em; font-weight: 700; border-left: 5px solid var(--accent-color); padding-left: 15px; background: #fafafa; }
+        .lvl-2 { font-size: 1.25em; font-weight: 600; color: #333; }
+        .lvl-3 { font-size: 1.1em; font-weight: 600; color: #444; }
+        .lvl-4 { font-size: 1em; font-weight: 600; font-style: italic; color: #555; }
+
+        p { margin-bottom: 1.2em; text-align: justify; }
+        
+        /* 補充意見 */
+        .supplementary {
+            background-color: #f1f5f9;
+            padding: 25px;
+            border-radius: 8px;
+            border-left: 4px solid #4a6fa5;
+            margin: 30px 0;
+            font-size: 0.95em;
+        }
+
+        /* --- 模態視窗 (心智圖) --- */
+        #mindmap-modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(5px);
+        }
+        
+        #mindmap-content {
+            width: 90%;
+            height: 90%;
+            background: white;
+            border-radius: 8px;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        #mindmap-header {
+            padding: 15px 20px;
+            background: #f0f0f0;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-family: 'Noto Sans TC', sans-serif;
+        }
+
+        #mindmap-svg-container {
+            flex: 1;
+            width: 100%;
+            height: 100%;
+        }
+        
+        #close-modal {
+            background: none;
+            border: none;
+            font-size: 1.5em;
+            cursor: pointer;
+            color: #666;
+        }
+        #close-modal:hover { color: #000; }
+
+        /* --- 載入畫面 --- */
+        #loader {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: #fff;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 3000;
+        }
+        .file-btn {
+            padding: 12px 24px;
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 1.1em;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        /* --- 手機版 --- */
+        #mobile-menu-btn {
+            display: none;
+            position: fixed;
+            bottom: 20px; right: 20px;
+            width: 50px; height: 50px;
+            background: var(--accent-color);
+            color: white;
+            border-radius: 50%;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5em;
+            z-index: 1500;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            cursor: pointer;
+        }
+
+        @media (max-width: 768px) {
+            #sidebar { position: fixed; left: -320px; height: 100%; }
+            #sidebar.open { transform: translateX(320px); }
+            #content-container { padding: 30px 20px; }
+            #mobile-menu-btn { display: flex; }
+            .tool-bar { opacity: 1; display: block; margin-left: 0; margin-top: 10px; }
+            .tool-btn { display: inline-flex; padding: 6px 12px; margin-right: 5px; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 載入層 -->
+    <div id="loader">
+        <h2 style="color: #333;">憲法法院判決書 - 智慧閱讀器</h2>
+        <p style="color: #666; margin-bottom: 20px;">請確保 .txt 檔案與此網頁位於同一資料夾</p>
+        <button class="file-btn" onclick="document.getElementById('fileInput').click()">📂 開啟判決書文字檔</button>
+        <input type="file" id="fileInput" accept=".txt" style="display:none">
+        <p id="statusMsg" style="margin-top:15px; color: #888; font-size: 0.9em;"></p>
+    </div>
+
+    <!-- 側邊欄 -->
+    <div id="sidebar">
+        <div id="sidebar-header">
+            <div style="font-weight: 500; font-size: 1.1em; margin-bottom: 5px;">判決書導航</div>
+            <button class="global-map-btn" onclick="showMindMap(rootNode, '全案總覽')">
+                <span>🧠</span> 顯示總心智圖
+            </button>
+        </div>
+        <div id="toc"></div>
+    </div>
+
+    <!-- 手機選單 -->
+    <div id="mobile-menu-btn">☰</div>
+
+    <!-- 主內容 -->
+    <div id="main">
+        <div id="content-container"></div>
+    </div>
+
+    <!-- 心智圖 Modal -->
+    <div id="mindmap-modal">
+        <div id="mindmap-content">
+            <div id="mindmap-header">
+                <span id="mindmap-title" style="font-weight:bold;">心智圖</span>
+                <button id="close-modal">✕</button>
+            </div>
+            <svg id="mindmap-svg-container"></svg>
+        </div>
+    </div>
+
+    <script>
+        const FILENAME = '2024헌나8_總統_尹錫悅_彈劾判決_全文.txt';
+        let rootNode = null; // 樹狀結構根節點
+        let markmapInstance = null;
+        let currentUtterance = null;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // 嘗試自動讀取
+            fetch(FILENAME)
+                .then(res => {
+                    if(!res.ok) throw new Error();
+                    return res.text();
+                })
+                .then(text => initApp(text))
+                .catch(() => {
+                    document.getElementById('statusMsg').innerText = "無法自動載入，請手動選擇檔案。";
+                });
+
+            // 手動選擇
+            document.getElementById('fileInput').addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (ev) => initApp(ev.target.result);
+                reader.readAsText(file);
+            });
+
+            // 手機選單
+            const sidebar = document.getElementById('sidebar');
+            const toggle = document.getElementById('mobile-menu-btn');
+            toggle.addEventListener('click', () => {
+                sidebar.classList.toggle('open');
+                toggle.innerText = sidebar.classList.contains('open') ? '✕' : '☰';
+            });
+
+            // 關閉 Modal
+            document.getElementById('close-modal').addEventListener('click', () => {
+                document.getElementById('mindmap-modal').style.display = 'none';
+                // 清空 SVG 以免下次重繪殘留
+                document.getElementById('mindmap-svg-container').innerHTML = '';
+            });
+        });
+
+        function initApp(text) {
+            document.getElementById('loader').style.display = 'none';
+            rootNode = parseTextToTree(text);
+            renderContent(rootNode);
+            renderToc(rootNode);
+        }
+
+        // --- 核心：解析文字為樹狀結構 ---
+        function parseTextToTree(text) {
+            const lines = text.split('\n');
+            // 定義虛擬根節點
+            const root = { id: 'root', title: '判決書全文', level: -1, content: [], children: [] };
+            let stack = [root];
+            
+            // 用來辨識層級的正則
+            const patterns = [
+                { regex: /^(主\s*文|理\s*由)$/, level: 0 },
+                { regex: /^(\d+)\.\s+(.+)$/, level: 1 }, // 1. 事件概要
+                { regex: /^([甲乙丙丁戊己庚辛])\.\s+(.+)$/, level: 2 }, // 甲. 
+                { regex: /^\((\d+)\)\s+(.+)$/, level: 3 }, // (1)
+                { regex: /^([A-Z])\)\s+(.+)$/, level: 4 }  // A)
+            ];
+
+            let headerBuffer = [];
+            let inHeader = true;
+
+            lines.forEach(line => {
+                const trimmed = line.trim();
+                if(!trimmed) return;
+
+                // 處理開頭的元數據 (直到遇到 "主文")
+                if(inHeader) {
+                    if(trimmed.replace(/\s/g,'') === '主文') {
+                        inHeader = false;
+                        // 把 Header 資訊當作特殊區塊放入
+                        const headerNode = {
+                            id: 'header-info',
+                            title: '基本資料',
+                            level: 0,
+                            content: headerBuffer,
+                            children: []
+                        };
+                        root.children.push(headerNode);
+                    } else {
+                        headerBuffer.push(trimmed);
+                        return;
+                    }
+                }
+
+                // 判斷是否為標題
+                let matchLevel = -1;
+                let titleText = '';
+
+                for(let p of patterns) {
+                    const m = trimmed.match(p.regex);
+                    if(m) {
+                        matchLevel = p.level;
+                        titleText = (p.level === 0) ? trimmed.replace(/\s/g,'') : (m[2] || m[1]); // 主文/理由用全名
+                        if(p.level === 1) titleText = m[0]; // 1. ... 保留編號
+                        if(p.level === 2) titleText = m[0];
+                        if(p.level === 3) titleText = m[0];
+                        break;
+                    }
+                }
+
+                if (matchLevel !== -1) {
+                    // 找到標題，建立新節點
+                    const newNode = {
+                        id: 'sec-' + Math.random().toString(36).substr(2, 9),
+                        title: titleText,
+                        level: matchLevel,
+                        content: [],
+                        children: []
+                    };
+
+                    // 調整 Stack：彈出比當前層級深或相等的節點，找到父節點
+                    while(stack.length > 1 && stack[stack.length-1].level >= matchLevel) {
+                        stack.pop();
+                    }
+                    stack[stack.length-1].children.push(newNode);
+                    stack.push(newNode);
+                } else {
+                    // 普通內文，加入當前節點
+                    stack[stack.length-1].content.push(trimmed);
+                }
+            });
+
+            return root;
+        }
+
+        // --- 渲染 HTML 內容 ---
+        function renderContent(node) {
+            const container = document.getElementById('content-container');
+            let html = '';
+
+            // 遞迴渲染
+            function traverse(n) {
+                // 忽略 root 本身，只渲染子節點
+                if(n.id === 'root') {
+                    html += `<h1 class="doc-title">2024憲那8 總統（尹錫悅）彈劾</h1>`;
+                    if(n.children) n.children.forEach(c => traverse(c));
+                    return;
+                }
+
+                // Header 特殊處理
+                if(n.id === 'header-info') {
+                    html += `<div style="text-align:right; color:#555; font-size:0.9em; margin-bottom:40px;">
+                        ${n.content.map(l => `<div>${l}</div>`).join('')}
+                    </div>`;
+                    return;
+                }
+
+                // 標題區塊
+                const isSupplement = n.title.includes('補充意見');
+                if(isSupplement) html += `<div class="supplementary">`;
+
+                html += `<div class="section-wrapper" id="wrap-${n.id}">`;
+                
+                // 標題 + 工具列
+                html += `<h${n.level + 2} id="${n.id}" class="section-header lvl-${n.level}">
+                            ${n.title}
+                         </h${n.level + 2}>
+                        `;
+                
+                // 工具按鈕 (只在有標題的節點顯示)
+                html += `<div class="tool-bar">
+                            <button class="tool-btn" onclick="playAudio('${n.id}')" id="btn-play-${n.id}">
+                                🔊 朗讀
+                            </button>
+                            <button class="tool-btn" onclick="showMindMapById('${n.id}')">
+                                🧠 心智圖
+                            </button>
+                         </div>`;
+                
+                html += `</div>`; // end wrapper
+
+                // 內文段落
+                if(n.content.length > 0) {
+                    html += `<div class="section-content">`;
+                    n.content.forEach(p => {
+                        html += `<p>${p}</p>`;
+                    });
+                    html += `</div>`;
+                }
+
+                // 子節點
+                if(n.children && n.children.length > 0) {
+                    n.children.forEach(c => traverse(c));
+                }
+
+                if(isSupplement) html += `</div>`;
+            }
+
+            traverse(node);
+            container.innerHTML = html;
+        }
+
+        // --- 渲染目錄 (TOC) ---
+        function renderToc(node) {
+            const tocDiv = document.getElementById('toc');
+            let html = '';
+
+            function traverse(n) {
+                if(n.id !== 'root' && n.id !== 'header-info') {
+                    // 限制長度
+                    let label = n.title.length > 18 ? n.title.substring(0, 18) + '...' : n.title;
+                    html += `<a href="#${n.id}" class="toc-item toc-lvl-${n.level}">${label}</a>`;
+                }
+                if(n.children) n.children.forEach(c => traverse(c));
+            }
+            traverse(node);
+            tocDiv.innerHTML = html;
+        }
+
+        // --- 功能 1: 語音朗讀 (TTS) ---
+        function playAudio(nodeId) {
+            const btn = document.getElementById(`btn-play-${nodeId}`);
+            
+            // 如果正在朗讀，則停止
+            if(window.speechSynthesis.speaking) {
+                window.speechSynthesis.cancel();
+                document.querySelectorAll('.tool-btn').forEach(b => {
+                    b.classList.remove('speaking');
+                    if(b.innerText.includes('停止')) b.innerHTML = '🔊 朗讀';
+                });
+                // 如果點擊的是同一個按鈕，就停在這裡
+                if(btn.dataset.speaking === 'true') {
+                    btn.dataset.speaking = 'false';
+                    return;
+                }
+            }
+
+            // 尋找節點資料
+            const targetNode = findNodeById(rootNode, nodeId);
+            if(!targetNode) return;
+
+            // 構建朗讀文本：標題 + 直接內文 (不包含子節點，避免太長)
+            let textToRead = targetNode.title + ".\n" + targetNode.content.join(".\n");
+            
+            // 如果內容太少，且有子節點，順便讀子節點的標題
+            if(targetNode.content.length === 0 && targetNode.children.length > 0) {
+                textToRead += "包含以下部分：";
+                targetNode.children.forEach(c => textToRead += c.title + "，");
+            }
+
+            const utterance = new SpeechSynthesisUtterance(textToRead);
+            utterance.lang = 'zh-TW';
+            utterance.rate = 1.0;
+
+            utterance.onstart = () => {
+                btn.classList.add('speaking');
+                btn.innerHTML = '⏹ 停止';
+                btn.dataset.speaking = 'true';
+            };
+            utterance.onend = () => {
+                btn.classList.remove('speaking');
+                btn.innerHTML = '🔊 朗讀';
+                btn.dataset.speaking = 'false';
+            };
+
+            window.speechSynthesis.speak(utterance);
+        }
+
+        // --- 功能 2: 心智圖 (Markmap) ---
+        function showMindMapById(nodeId) {
+            const targetNode = findNodeById(rootNode, nodeId);
+            if(targetNode) showMindMap(targetNode, targetNode.title);
+        }
+
+        function showMindMap(dataNode, title) {
+            document.getElementById('mindmap-modal').style.display = 'flex';
+            document.getElementById('mindmap-title').innerText = title + " - 心智圖";
+            
+            // 轉換資料格式為 Markmap Markdown 格式
+            const markdown = convertNodeToMarkdown(dataNode);
+            
+            // 渲染
+            const svgEl = document.getElementById('mindmap-svg-container');
+            svgEl.innerHTML = ''; // 清空
+            
+            const { Markmap, Transformer } = window.markmap;
+            const transformer = new Transformer();
+            const { root, features } = transformer.transform(markdown);
+            
+            Markmap.create(svgEl, null, root);
+        }
+
+        // 將樹狀結構轉為 Markmap 支援的 Markdown 格式 (#, ##, -) 
+        function convertNodeToMarkdown(node, depth = 1) {
+            let md = "";
+            // 如果是 Root 傳入，只取其 Title
+            if(depth === 1) {
+                md += `# ${node.title}\n`;
+            } else {
+                // 根據深度決定層級
+            }
+
+            // 處理子節點
+            if(node.children && node.children.length > 0) {
+                node.children.forEach(child => {
+                    md += recursiveMarkdown(child, 0);
+                });
+            } else {
+                // 葉節點：嘗試把內文變成子項目，避免只有標題
+                if(node.content.length > 0) {
+                    node.content.slice(0, 3).forEach(p => {
+                        // 擷取前幾句作為重點
+                        let summary = p.substring(0, 30) + (p.length>30?'...':'');
+                        md += `- ${summary}\n`;
+                    });
+                }
+            }
+            return md;
+        }
+
+        function recursiveMarkdown(node, indentLevel) {
+            let indent = "  ".repeat(indentLevel);
+            let str = `${indent}- ${node.title}\n`;
+            
+            // 內文 (選擇性顯示，避免太亂，只顯示第一段簡要)
+            /* 
+            if(node.content.length > 0) {
+                let p = node.content[0];
+                let summary = p.length > 20 ? p.substring(0, 20) + "..." : p;
+                str += `${indent}  - <small>${summary}</small>\n`;
+            }
+            */
+
+            if(node.children) {
+                node.children.forEach(c => {
+                    str += recursiveMarkdown(c, indentLevel + 1);
+                });
+            }
+            return str;
+        }
+
+        // --- 輔助函式 ---
+        function findNodeById(node, id) {
+            if(node.id === id) return node;
+            if(node.children) {
+                for(let c of node.children) {
+                    const found = findNodeById(c, id);
+                    if(found) return found;
+                }
+            }
+            return null;
+        }
+
+    </script>
+</body>
+</html>
